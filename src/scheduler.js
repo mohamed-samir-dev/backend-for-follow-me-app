@@ -14,21 +14,33 @@ async function checkAndNotify() {
   const now = new Date();
   const limit = new Date(now.getTime() + DAYS * 24 * 60 * 60 * 1000);
 
-  const [projects, services, backups] = await Promise.all([
+  const backupLimit = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+  const [maintenance, domains, services, backups] = await Promise.all([
     Project.find({ maintenanceEndDate: { $gte: now, $lte: limit } }),
+    Project.find({ renewalDate: { $gte: now, $lte: limit } }),
     Service.find({ renewalDate: { $gte: now, $lte: limit } }),
-    Backup.find({ done: false, backupDate: { $gte: now, $lte: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000) } }),
+    Backup.find({ done: false, backupDate: { $gte: now, $lte: backupLimit } }),
   ]);
 
-  if (!projects.length && !services.length && !backups.length) return;
+  if (!maintenance.length && !domains.length && !services.length && !backups.length) return;
 
   let msg = `🔔 *تنبيهات مواعيد قادمة*\n\n`;
 
-  if (projects.length) {
+  if (maintenance.length) {
     msg += `🛠️ *صيانة مشاريع:*\n`;
-    projects.forEach((p) => {
+    maintenance.forEach((p) => {
       const d = daysLeft(p.maintenanceEndDate);
       msg += `• ${p.projectName} (${p.clientName}) — بعد ${d} يوم\n`;
+    });
+    msg += "\n";
+  }
+
+  if (domains.length) {
+    msg += `🌐 *تجديد دومينات:*\n`;
+    domains.forEach((p) => {
+      const d = daysLeft(p.renewalDate);
+      msg += `• ${p.domain || p.projectName} (${p.clientName}) — بعد ${d} يوم\n`;
     });
     msg += "\n";
   }
