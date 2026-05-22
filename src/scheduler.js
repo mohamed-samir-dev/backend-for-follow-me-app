@@ -75,6 +75,6 @@ async function checkAndNotify() {
 
 // كل يوم الساعة 9 الصبح
 export const startScheduler = () => {
-  cron.schedule("45 5 * * *", checkAndNotify, { timezone: "Africa/Cairo" });
+  cron.schedule("0 9 * * *", checkAndNotify, { timezone: "Africa/Cairo" });
   console.log("⏰ Scheduler شغال - تنبيهات كل يوم 9 صباحاً");
 };
