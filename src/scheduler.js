@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import Project from "./models/Project.js";
 import Service from "./models/Service.js";
+import Backup from "./models/Backup.js";
 import { sendWhatsApp } from "./whatsapp.js";
 
 const DAYS = 7;
@@ -13,12 +14,13 @@ async function checkAndNotify() {
   const now = new Date();
   const limit = new Date(now.getTime() + DAYS * 24 * 60 * 60 * 1000);
 
-  const [projects, services] = await Promise.all([
+  const [projects, services, backups] = await Promise.all([
     Project.find({ maintenanceEndDate: { $gte: now, $lte: limit } }),
     Service.find({ renewalDate: { $gte: now, $lte: limit } }),
+    Backup.find({ done: false, backupDate: { $gte: now, $lte: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000) } }),
   ]);
 
-  if (!projects.length && !services.length) return;
+  if (!projects.length && !services.length && !backups.length) return;
 
   let msg = `🔔 *تنبيهات مواعيد قادمة*\n\n`;
 
@@ -36,6 +38,16 @@ async function checkAndNotify() {
     services.forEach((s) => {
       const d = daysLeft(s.renewalDate);
       msg += `• ${s.name} (${s.type}) — بعد ${d} يوم\n`;
+    });
+    msg += "\n";
+  }
+
+  if (backups.length) {
+    msg += `💾 *مواعيد باك اب:*\n`;
+    backups.forEach((b) => {
+      const d = daysLeft(b.backupDate);
+      const label = d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`;
+      msg += `• ${b.title} — ${label}\n`;
     });
   }
 

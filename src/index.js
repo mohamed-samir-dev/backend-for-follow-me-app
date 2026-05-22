@@ -5,6 +5,7 @@ import { connectDB } from "./db.js";
 import servicesRouter from "./routes/services.js";
 import authRouter from "./routes/auth.js";
 import projectsRouter from "./routes/projects.js";
+import backupsRouter from "./routes/backups.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./scheduler.js";
 
@@ -20,6 +21,7 @@ app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/services", authMiddleware, servicesRouter);
 app.use("/api/projects", authMiddleware, projectsRouter);
+app.use("/api/backups", authMiddleware, backupsRouter);
 
 app.get("/", (_, res) => res.json({ status: "ok", message: "✅ API is running!" }));
 
