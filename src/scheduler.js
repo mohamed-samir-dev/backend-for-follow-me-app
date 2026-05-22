@@ -2,6 +2,7 @@ import cron from "node-cron";
 import Project from "./models/Project.js";
 import Service from "./models/Service.js";
 import Backup from "./models/Backup.js";
+import Note from "./models/Note.js";
 import { sendWhatsApp } from "./whatsapp.js";
 
 const NOTIFY_DAYS = [0, 1, 2, 3, 4, 5];
@@ -25,12 +26,17 @@ async function checkAndNotify() {
     Backup.find({ done: false, backupDate: { $gte: now, $lte: limit } }),
   ]);
 
+  // Notes with reminder due today
+  const startOfDay = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(now); endOfDay.setHours(23, 59, 59, 999);
+  const dueNotes = await Note.find({ notified: false, reminderDate: { $gte: startOfDay, $lte: endOfDay } });
+
   const filteredMaintenance = maintenance.filter((p) => inNotifyDays(p.maintenanceEndDate));
   const filteredDomains = domains.filter((p) => inNotifyDays(p.renewalDate));
   const filteredServices = services.filter((s) => inNotifyDays(s.renewalDate));
   const filteredBackups = backups.filter((b) => inNotifyDays(b.backupDate));
 
-  if (!filteredMaintenance.length && !filteredDomains.length && !filteredServices.length && !filteredBackups.length) return;
+  if (!filteredMaintenance.length && !filteredDomains.length && !filteredServices.length && !filteredBackups.length && !dueNotes.length) return;
 
   let msg = `🔔 *تنبيهات مواعيد قادمة*\n\n`;
 
@@ -67,6 +73,13 @@ async function checkAndNotify() {
       const d = daysLeft(b.backupDate);
       msg += `• ${b.title} — ${d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`}\n`;
     });
+    msg += "\n";
+  }
+
+  if (dueNotes.length) {
+    msg += `📝 *تذكير ملاحظات:*\n`;
+    dueNotes.forEach((n) => { msg += `• ${n.text}\n`; });
+    await Note.updateMany({ _id: { $in: dueNotes.map((n) => n._id) } }, { notified: true });
   }
 
   await sendWhatsApp(msg);

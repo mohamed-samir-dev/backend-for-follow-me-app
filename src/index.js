@@ -6,6 +6,7 @@ import servicesRouter from "./routes/services.js";
 import authRouter from "./routes/auth.js";
 import projectsRouter from "./routes/projects.js";
 import backupsRouter from "./routes/backups.js";
+import notesRouter from "./routes/notes.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { startScheduler } from "./scheduler.js";
 
@@ -22,6 +23,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/services", authMiddleware, servicesRouter);
 app.use("/api/projects", authMiddleware, projectsRouter);
 app.use("/api/backups", authMiddleware, backupsRouter);
+app.use("/api/notes", authMiddleware, notesRouter);
 
 app.get("/", (_, res) => res.json({ status: "ok", message: "✅ API is running!" }));
 
