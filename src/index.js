@@ -6,6 +6,7 @@ import servicesRouter from "./routes/services.js";
 import authRouter from "./routes/auth.js";
 import projectsRouter from "./routes/projects.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { startScheduler } from "./scheduler.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,4 +24,5 @@ app.get("/api/health", (_, res) => res.json({ status: "ok" }));
 
 connectDB().then(() => {
   app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+  startScheduler();
 });
