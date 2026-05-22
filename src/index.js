@@ -11,7 +11,10 @@ import { startScheduler } from "./scheduler.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL || "https://frontend-for-follow-me-app.vercel.app",
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/auth", authRouter);
