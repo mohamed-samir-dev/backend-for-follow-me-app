@@ -4,62 +4,68 @@ import Service from "./models/Service.js";
 import Backup from "./models/Backup.js";
 import { sendWhatsApp } from "./whatsapp.js";
 
-const DAYS = 7;
+const NOTIFY_DAYS = [0, 1, 2, 3, 4, 5];
 
 function daysLeft(date) {
   return Math.ceil((new Date(date) - new Date()) / (1000 * 60 * 60 * 24));
 }
 
+function inNotifyDays(date) {
+  return NOTIFY_DAYS.includes(daysLeft(date));
+}
+
 async function checkAndNotify() {
   const now = new Date();
-  const limit = new Date(now.getTime() + DAYS * 24 * 60 * 60 * 1000);
-
-  const backupLimit = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+  const limit = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
 
   const [maintenance, domains, services, backups] = await Promise.all([
     Project.find({ maintenanceEndDate: { $gte: now, $lte: limit } }),
     Project.find({ renewalDate: { $gte: now, $lte: limit } }),
     Service.find({ renewalDate: { $gte: now, $lte: limit } }),
-    Backup.find({ done: false, backupDate: { $gte: now, $lte: backupLimit } }),
+    Backup.find({ done: false, backupDate: { $gte: now, $lte: limit } }),
   ]);
 
-  if (!maintenance.length && !domains.length && !services.length && !backups.length) return;
+  const filteredMaintenance = maintenance.filter((p) => inNotifyDays(p.maintenanceEndDate));
+  const filteredDomains = domains.filter((p) => inNotifyDays(p.renewalDate));
+  const filteredServices = services.filter((s) => inNotifyDays(s.renewalDate));
+  const filteredBackups = backups.filter((b) => inNotifyDays(b.backupDate));
+
+  if (!filteredMaintenance.length && !filteredDomains.length && !filteredServices.length && !filteredBackups.length) return;
 
   let msg = `🔔 *تنبيهات مواعيد قادمة*\n\n`;
 
-  if (maintenance.length) {
+  if (filteredMaintenance.length) {
     msg += `🛠️ *صيانة مشاريع:*\n`;
-    maintenance.forEach((p) => {
+    filteredMaintenance.forEach((p) => {
       const d = daysLeft(p.maintenanceEndDate);
-      msg += `• ${p.projectName} (${p.clientName}) — بعد ${d} يوم\n`;
+      msg += `• ${p.projectName} (${p.clientName}) — ${d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`}\n`;
     });
     msg += "\n";
   }
 
-  if (domains.length) {
+  if (filteredDomains.length) {
     msg += `🌐 *تجديد دومينات:*\n`;
-    domains.forEach((p) => {
+    filteredDomains.forEach((p) => {
       const d = daysLeft(p.renewalDate);
-      msg += `• ${p.domain || p.projectName} (${p.clientName}) — بعد ${d} يوم\n`;
+      msg += `• ${p.domain || p.projectName} (${p.clientName}) — ${d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`}\n`;
     });
     msg += "\n";
   }
 
-  if (services.length) {
+  if (filteredServices.length) {
     msg += `⚙️ *تجديد خدمات:*\n`;
-    services.forEach((s) => {
+    filteredServices.forEach((s) => {
       const d = daysLeft(s.renewalDate);
-      msg += `• ${s.name} (${s.type}) — بعد ${d} يوم\n`;
+      msg += `• ${s.name} (${s.type}) — ${d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`}\n`;
     });
     msg += "\n";
   }
 
-  if (backups.length) {
+  if (filteredBackups.length) {
     msg += `💾 *مواعيد باك اب:*\n`;
-    backups.forEach((b) => {
+    filteredBackups.forEach((b) => {
       const d = daysLeft(b.backupDate);
-      const label = d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`;
-      msg += `• ${b.title} — ${label}\n`;
+      msg += `• ${b.title} — ${d === 0 ? "⚠️ اليوم!" : `بعد ${d} يوم`}\n`;
     });
   }
 
