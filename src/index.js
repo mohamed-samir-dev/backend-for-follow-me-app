@@ -4,6 +4,7 @@ import cors from "cors";
 import { connectDB } from "./db.js";
 import servicesRouter from "./routes/services.js";
 import authRouter from "./routes/auth.js";
+import projectsRouter from "./routes/projects.js";
 import { authMiddleware } from "./middleware/auth.js";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRouter);
 app.use("/api/services", authMiddleware, servicesRouter);
+app.use("/api/projects", authMiddleware, projectsRouter);
 
 app.get("/", (_, res) => res.json({ status: "ok", message: "✅ API is running!" }));
 
